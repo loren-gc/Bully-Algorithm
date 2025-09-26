@@ -22,8 +22,12 @@ BASE_PORT = 5050
 GENERAL_ADDRESS = "127.0.0.1"
 SERVER_IP = "127.0.0.1"
 
-TIMEOUT_LIMIT = 2
+TIMEOUT_AMOUNT_LIMIT = 2
+TIMEOUT_TIME_LIMIT = 0.4 # (in seconds)
 timeouts = []
+
+IN_ELECTION = False
+alive_processes = [] # List that keeps track of the current running process on the distributed system
 
 ######################################################## CLASSSES AND DICTIONARIES ###########################################################
 
@@ -66,12 +70,16 @@ def environment_start(program_process_id, program_server_port):
     for i in range(PROCESSES_AMOUNT):
         timeouts.append(0)
         processes_ports.append(BASE_PORT+i)
+        alive_processes.append(True)
     call_election() # When starting, a process automatically calls for an election
 
 def send_payload(payload, destiny_port):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((GENERAL_ADDRESS, destiny_port))
-    s.sendall(payload)
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((GENERAL_ADDRESS, destiny_port))
+        s.sendall(payload)
+    except socket.error:
+        pass
 
 #################################################### SERVER
 def server():
@@ -80,7 +88,8 @@ def server():
 ################################################# HEARTBEAT
 def check_heartbeats():
     for i in range(PROCESSES_AMOUNT):
-        if timeouts[i] > TIMEOUT_LIMIT:
+        if timeouts[i] > TIMEOUT_AMOUNT_LIMIT:
+            print(f"Process with process_id {i} has crashed!")
             thread = threading.Thread(target=call_election, daemon=True)
             thread.start()
             return
@@ -98,7 +107,7 @@ def send_heartbeats():
 def heartbeat():
     while True:
         send_heartbeats()
-        time.sleep(0.4)
+        time.sleep(TIMEOUT_TIME_LIMIT)
         check_heartbeats()
 
 ############################################ CALL ELECTION
