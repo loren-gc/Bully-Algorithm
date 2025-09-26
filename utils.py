@@ -30,31 +30,13 @@ COORDINATOR_ID = 0
 IN_ELECTION = False
 alive_processes = [] # List that keeps track of the current running process on the distributed system
 
-######################################################## CLASSSES AND DICTIONARIES ###########################################################
+############################################################## MESSAGE CLASS ################################################################
 
 class Message(IntEnum):
     ELECTION = 1
     OK = 2
     COORDINATOR = 3
     HEARTBEAT = 4
-
-def json_dumps(payload):
-    return json.dumps(payload).encode("utf-8")
-
-ELECTION = {
-    'type': Message.ELECTION
-}
-ELECTION_PAYLOAD = json_dumps(ELECTION)
-
-OK = {
-    'type': Message.OK
-}
-OK_PAYLOAD = json_dumps(OK)
-
-COORDINATOR = {
-    'type': Message.COORDINATOR
-}
-COORDINATOR_PAYLOAD = json_dumps(COORDINATOR)
 
 ######################################################### FUNCTIONS AND PROCEDURES ##########################################################
 
