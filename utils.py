@@ -33,26 +33,29 @@ class Message(IntEnum):
     COORDINATOR = 3
     HEARTBEAT = 4
 
+def json_dumps(payload):
+    json.dumps(payload).encode("utf-8")
+
 ELECTION = {
     'type': Message.ELECTION
 }
-ELECTION_PAYLOAD = json.dumps(ELECTION).encode("utf-8")
+ELECTION_PAYLOAD = json_dumps(ELECTION)
 
 OK = {
     'type': Message.OK
 }
-OK_PAYLOAD = json.dumps(OK).encode("utf-8")
+OK_PAYLOAD = json_dumps(OK)
 
 COORDINATOR = {
     'type': Message.COORDINATOR
 }
-COORDINATOR_PAYLOAD = json.dumps(COORDINATOR).encode("utf-8")
+COORDINATOR_PAYLOAD = json_dumps(COORDINATOR)
 
 HEARTBEAT = {
     'type': Message.HEARTBEAT,
     'process_id': process_id
 }
-HEARTBEAT_PAYLOAD = json.dumps(HEARTBEAT).encode("utf-8")
+HEARTBEAT_PAYLOAD = json_dumps(HEARTBEAT)
 
 ######################################################### FUNCTIONS AND PROCEDURES ##########################################################
 
