@@ -8,7 +8,7 @@ import json
 import time
 from enum import IntEnum
 
-################################################################# CONSTANTS ################################################################
+############################################################### CONSTANTS ####################################################################
 
 lock = threading.Lock() 
 
@@ -25,7 +25,7 @@ SERVER_IP = "127.0.0.1"
 TIMEOUT_LIMIT = 2
 timeouts = []
 
-################################################################# CLASSSES #################################################################
+######################################################## CLASSSES AND DICTIONARIES ###########################################################
 
 class Message(IntEnum):
     ELECTION = 1
@@ -33,8 +33,30 @@ class Message(IntEnum):
     COORDINATOR = 3
     HEARTBEAT = 4
 
+ELECTION = {
+    'type': Message.ELECTION
+}
+ELECTION_PAYLOAD = json.dumps(ELECTION).encode("utf-8")
+
+OK = {
+    'type': Message.OK
+}
+OK_PAYLOAD = json.dumps(OK).encode("utf-8")
+
+COORDINATOR = {
+    'type': Message.COORDINATOR
+}
+COORDINATOR_PAYLOAD = json.dumps(COORDINATOR).encode("utf-8")
+
+HEARTBEAT = {
+    'type': Message.HEARTBEAT,
+    'process_id': process_id
+}
+HEARTBEAT_PAYLOAD = json.dumps(HEARTBEAT).encode("utf-8")
+
 ######################################################### FUNCTIONS AND PROCEDURES ##########################################################
-###################################### GENERAL PROCEDURES AND FUNCTIONS
+
+############################ GENERAL PROCEDURES AND FUNCTIONS
 def environment_start(program_process_id, program_server_port):
     process_id = program_process_id
     server_port = program_server_port
@@ -48,11 +70,11 @@ def send_payload(payload, destiny_port):
     s.connect((GENERAL_ADDRESS, destiny_port))
     s.sendall(payload)
 
-###################################### SERVER
+#################################################### SERVER
 def server():
     print("")
 
-###################################### HEARTBEAT
+################################################# HEARTBEAT
 def check_heartbeats():
     for i in range(PROCESSES_AMOUNT):
         if timeouts[i] > TIMEOUT_LIMIT:
@@ -62,11 +84,7 @@ def check_heartbeats():
 
 def send_heartbeats():
     global timeouts
-    heartbeat = {
-        'type': Message.HEARTBEAT,
-        'process_id': process_id
-    }
-    payload = json.dumps(heartbeat).encode("utf-8")
+    payload = HEARTBEAT_PAYLOAD
     for i in range(PROCESSES_AMOUNT):
         if i != process_id:
             destiny_port =  processes_ports[i]
@@ -80,7 +98,7 @@ def heartbeat():
         time.sleep(0.4)
         check_heartbeats()
 
-###################################### CALL ELECTION
+############################################ CALL ELECTION
 def call_election():
     print("Calling for an election!")
 
