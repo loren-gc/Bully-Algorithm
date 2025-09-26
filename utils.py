@@ -61,6 +61,7 @@ def check_heartbeats():
             return
 
 def send_heartbeats():
+    global timeouts
     heartbeat = {
         'type': Message.HEARTBEAT,
         'process_id': process_id
@@ -70,7 +71,8 @@ def send_heartbeats():
         if i != process_id:
             destiny_port =  processes_ports[i]
             send_payload(payload, destiny_port)
-            timeouts[i] += 1
+            with lock:
+                timeouts[i] += 1
 
 def heartbeat():
     while True:
