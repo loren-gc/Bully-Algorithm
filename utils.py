@@ -27,7 +27,7 @@ TIMEOUT_TIME_LIMIT = 0.5 # (in seconds)
 timeouts = []
 
 COORDINATOR_ID = 0
-IN_ELECTION = False
+in_election = False
 alive_processes = [] # List that keeps track of the current running process on the distributed system
 
 ############################################################## MESSAGE CLASS ################################################################
@@ -58,22 +58,94 @@ def send_payload(payload, destiny_port):
         s.sendall(payload)
     except socket.error:
         pass
+############################################ CALL ELECTION
+def send_coordinator_messages():
+    # Informing all the other process that this process won the election:
+    print("")
+
+def send_election_messages():
+    # sending only to the processes with smaller process_id:
+    print("")
+
+def call_election():
+    global in_election
+    with lock:
+        in_election = True
+    print("Calling for an election!")
+    send_election_messages()
+    time.sleep(TIMEOUT_TIME_LIMIT*TIMEOUT_AMOUNT_LIMIT) # Time limit for the election to end
+    if in_election == True: # If the in_election variable is still True, this process won the election 
+        with lock:
+            in_election = False
+        send_coordinator_messages()
+
+################################################# HEARTBEAT
+def check_heartbeats():
+    global timeouts, alive_processes
+    for i in range(PROCESSES_AMOUNT):
+        if alive_processes[i] == True and timeouts[i] > TIMEOUT_AMOUNT_LIMIT:
+            print(f"Process with process_id {i} has crashed!")
+            with lock:
+                alive_processes[i] = False
+            thread = threading.Thread(target=call_election, daemon=True)
+            thread.start()
+            return
+
+def send_heartbeats():
+    global timeouts
+    heartbeat = {
+        'type': Message.HEARTBEAT,
+        'process_id': process_id
+    }
+    payload = json.dumps(heartbeat).encode("utf-8")
+    for i in range(PROCESSES_AMOUNT):
+        if i != process_id:
+            destiny_port =  processes_ports[i]
+            send_payload(payload, destiny_port)
+            with lock:
+                timeouts[i] += 1
+
+def heartbeat():
+    while True:
+        send_heartbeats()
+        time.sleep(TIMEOUT_TIME_LIMIT)
+        check_heartbeats()
 
 #################################################### SERVER
+def send_ok_message(election_id):
+    ok = {
+        'type': Message.OK,
+        'process_id': process_id
+    }
+    payload = json.dumps(ok).encode("utf-8")
+    destiny_port = processes_ports[election_id]
+    send_payload(payload, destiny_port)
+
 def handle_election(election):
-    print("")
+    election_id = election["process_id"]
+    send_ok_message(election_id)
 
 def handle_ok(ok):
-    print("")
+    global in_election
+    with lock:
+        if in_election == True:
+            in_election = False
 
 def handle_coordinator(coordinator):
+    print("Change the coordinator_id to the id in the coordinator message")
     print("")
     
 def handle_heartbeat(heartbeat):
-    global timeouts
-    print("heartbeat process id = ", heartbeat["process_id"])
+    global timeouts, alive_processes
+    heartbeat_id = heartbeat["process_id"] 
     with lock:
-        timeouts[heartbeat["process_id"]] = 0
+        timeouts[heartbeat_id] = 0
+        if alive_processes[heartbeat_id] == False:
+            print(f"Process with id {heartbeat_id} has returned!!")
+            with lock:
+                alive_processes[heartbeat_id] = True
+            thread = threading.Thread(target=call_election, daemon=True)
+            thread.start()
 
 def handle_message(message):
     t = message["type"]
@@ -103,39 +175,4 @@ def server():
         # thread to handle the client:
         thread = threading.Thread(target=handle_client, args=(conn, addr), daemon=True)
         thread.start()
-
-################################################# HEARTBEAT
-def check_heartbeats():
-    for i in range(PROCESSES_AMOUNT):
-        if timeouts[i] > TIMEOUT_AMOUNT_LIMIT:
-            print(f"Process with process_id {i} has crashed!")
-            print(timeouts)
-            thread = threading.Thread(target=call_election, daemon=True)
-            thread.start()
-            return
-
-def send_heartbeats():
-    global timeouts
-    heartbeat = {
-        'type': Message.HEARTBEAT,
-        'process_id': process_id
-    }
-    payload = json.dumps(heartbeat).encode("utf-8")
-    print(f"process id = {process_id}")
-    for i in range(PROCESSES_AMOUNT):
-        if i != process_id:
-            destiny_port =  processes_ports[i]
-            send_payload(payload, destiny_port)
-            with lock:
-                timeouts[i] += 1
-
-def heartbeat():
-    while True:
-        send_heartbeats()
-        time.sleep(TIMEOUT_TIME_LIMIT)
-        check_heartbeats()
-
-############################################ CALL ELECTION
-def call_election():
-    print("Calling for an election!")
 
