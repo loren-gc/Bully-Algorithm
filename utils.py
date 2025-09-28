@@ -26,7 +26,7 @@ TIMEOUT_AMOUNT_LIMIT = 2
 TIMEOUT_TIME_LIMIT = 0.5 # (in seconds)
 timeouts = []
 
-COORDINATOR_ID = 0
+coordinator_id = 0
 in_election = False
 alive_processes = [] # List that keeps track of the current running process on the distributed system
 
@@ -68,14 +68,15 @@ def send_election_messages():
     print("")
 
 def call_election():
-    global in_election
+    global in_election, coordinator_id
     with lock:
         in_election = True
     print("Calling for an election!")
     send_election_messages()
     time.sleep(TIMEOUT_TIME_LIMIT*TIMEOUT_AMOUNT_LIMIT) # Time limit for the election to end
-    if in_election == True: # If the in_election variable is still True, this process won the election 
+    if in_election == True: # If the in_election variable is still True, this process won the election
         with lock:
+            coordinator_id = process_id
             in_election = False
         send_coordinator_messages()
 
@@ -142,8 +143,7 @@ def handle_heartbeat(heartbeat):
         timeouts[heartbeat_id] = 0
         if alive_processes[heartbeat_id] == False:
             print(f"Process with id {heartbeat_id} has returned!!")
-            with lock:
-                alive_processes[heartbeat_id] = True
+            alive_processes[heartbeat_id] = True
             thread = threading.Thread(target=call_election, daemon=True)
             thread.start()
 
