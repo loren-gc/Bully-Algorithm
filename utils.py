@@ -49,7 +49,7 @@ def environment_start(program_process_id, program_server_port):
         timeouts.append(0)
         processes_ports.append(BASE_PORT+i)
         alive_processes.append(True)
-    call_election() # When starting, a process automatically calls for an election
+    #call_election() # When starting, a process automatically calls for an election
 
 def send_payload(payload, destiny_port):
     try:
@@ -82,14 +82,16 @@ def call_election():
 
 ################################################# HEARTBEAT
 def check_heartbeats():
-    global timeouts, alive_processes
+    global timeouts, alive_processes, coordinator_id
     for i in range(PROCESSES_AMOUNT):
         if alive_processes[i] == True and timeouts[i] > TIMEOUT_AMOUNT_LIMIT:
-            print(f"Process with process_id {i} has crashed!")
+            print(f"Process with process_id = {i} has crashed!")
             with lock:
                 alive_processes[i] = False
-            thread = threading.Thread(target=call_election, daemon=True)
-            thread.start()
+                # If the coordinator process has fallen a new election must be called:
+                if i == coordinator_id:
+                    thread = threading.Thread(target=call_election, daemon=True)
+                    thread.start()
             return
 
 def send_heartbeats():
