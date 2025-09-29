@@ -16,7 +16,7 @@ Each process runs 3 concurrent threads:
 - **Heartbeat Thread**: Monitors other processes' availability
 - **Election Thread**: Handles leader election process
 
-## 🏗️ Estrutura do Projeto
+## 📐 Estrutura do Projeto
 
     bully-algorithm/
     ├── process1.py          # Process with ID 0 (port 5050)
