@@ -25,7 +25,8 @@ GENERAL_ADDRESS = "127.0.0.1"
 SERVER_IP = "127.0.0.1"
 
 TIMEOUT_AMOUNT_LIMIT = 3
-TIMEOUT_TIME_LIMIT = 10 # (in seconds)
+TIMEOUT_TIME_LIMIT = 0.5 # (in seconds)
+ELECTION_TIMEOUT = 1
 timeouts = []
 
 coordinator_id = 0
@@ -43,7 +44,7 @@ class Message(IntEnum):
 ######################################################### FUNCTIONS AND PROCEDURES ##########################################################
 
 ############################ GENERAL PROCEDURES AND FUNCTIONS
-def environment_start(program_process_id, program_server_port):
+def environment_setup(program_process_id, program_server_port):
     global process_id, server_port, alive_processes, timeouts
     process_id = program_process_id
     server_port = program_server_port
@@ -51,22 +52,15 @@ def environment_start(program_process_id, program_server_port):
         timeouts.append(0)
         processes_ports.append(BASE_PORT+i)
         alive_processes.append(True)
-    time.sleep(10)
-    call_election() # When starting, a process automatically calls for an election
 
 def send_payload(payload, destiny_port):
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((GENERAL_ADDRESS, destiny_port))
         s.sendall(payload)
-    except ConnectionRefusedError:
-        print(f"Process {process_id+1}: Conexão recusada para {GENERAL_ADDRESS}:{destiny_port}. Servidor não está ativo ou porta incorreta.")
-    except TimeoutError:
-        print(f"Process {process_id+1}: Timeout ao tentar conectar a {GENERAL_ADDRESS}:{destiny_port}.")
-    except socket.error as e:
-        print(f"Process {process_id+1}: Erro de socket ao enviar para {GENERAL_ADDRESS}:{destiny_port}: {e}")
-    except Exception as e:
-        print(f"Process {process_id+1}: Erro inesperado ao enviar payload para {destiny_port}: {e}")
+        s.close()
+    except:
+        pass
 
 ############################################ CALL ELECTION
 def send_coordinator_messages():
@@ -78,7 +72,7 @@ def send_coordinator_messages():
     payload = json.dumps(coordinator).encode("utf-8")
     # Informing all the other process that this process won the election:
     for i in range(PROCESSES_AMOUNT):
-        if alive_processes[i] == True:
+        if alive_processes[i] == True and i != process_id:
             destiny_port = processes_ports[i]
             send_payload(payload, destiny_port)
 
@@ -94,7 +88,6 @@ def send_election_messages():
         if alive_processes[i] == True:
             destiny_port = processes_ports[i]
             send_payload(payload, destiny_port)
-            print(f"ELEICAO ENVIADAAAAAAAAAAAAAAA para a porta {processes_ports[i]}")
 
 def call_election():
     global process_id, in_election, coordinator_id
@@ -102,10 +95,10 @@ def call_election():
         in_election = True
     print("Calling for an election!")
     send_election_messages()
-    time.sleep(7)
-    #time.sleep(TIMEOUT_TIME_LIMIT*TIMEOUT_AMOUNT_LIMIT) # Time limit for the election to end
+    send_ok_messages()
+    time.sleep(ELECTION_TIMEOUT)
     if in_election == True: # If the in_election variable is still True, this process won the election
-        print("This process is the new COORDINATOR!!!")
+        print("\nThis process is the new COORDINATOR!!!")
         with lock:
             coordinator_id = process_id
             in_election = False
@@ -116,11 +109,12 @@ def check_heartbeats():
     global timeouts, alive_processes, coordinator_id
     for i in range(PROCESSES_AMOUNT):
         if alive_processes[i] == True and timeouts[i] > TIMEOUT_AMOUNT_LIMIT:
-            print(f"Process with process_id = {i} has crashed!")
+            print(f"\nProcess with process_id = {i} has crashed!")
             with lock:
                 alive_processes[i] = False
                 # If the coordinator process has fallen a new election must be called:
                 if i == coordinator_id:
+                    print("This process was the COORDINATOR")
                     thread = threading.Thread(target=call_election, daemon=True)
                     thread.start()
             return
@@ -134,7 +128,7 @@ def send_heartbeats():
     payload = json.dumps(heartbeat).encode("utf-8")
     for i in range(PROCESSES_AMOUNT):
         if i != process_id:
-            destiny_port =  processes_ports[i]
+            destiny_port = processes_ports[i]
             send_payload(payload, destiny_port)
             with lock:
                 timeouts[i] += 1
@@ -146,24 +140,27 @@ def heartbeat():
         check_heartbeats()
 
 #################################################### SERVER
-def send_ok_message(election_id):
+def send_ok_message(destiny_process):
     global process_id, processes_ports
     ok = {
         'type': Message.OK,
         'process_id': process_id
     }
     payload = json.dumps(ok).encode("utf-8")
-    destiny_port = processes_ports[election_id]
+    destiny_port = processes_ports[destiny_process]
     send_payload(payload, destiny_port)
-    print("OK ENVISDOOOOOOOOOOOOOO")
 
 def handle_election(election):
     election_id = election["process_id"]
-    print(f"EELICOAO RECEBIDAAAAAAAAA = {election_id}")
     send_ok_message(election_id)
 
+def send_ok_messages():
+    global process_id, alive_processes, PROCESSES_AMOUNT
+    for i in range(process_id+1, PROCESSES_AMOUNT):
+        if alive_processes[i] == True:
+            send_ok_message(i)
+
 def handle_ok():
-    print("OKKKKKKKKKKKKKKK RECEBIDDDODODOODODODDOO")
     global in_election
     with lock:
         if in_election == True:
@@ -173,7 +170,7 @@ def handle_coordinator(coordinator):
     global coordinator_id
     with lock:
         coordinator_id = coordinator["process_id"]
-    print(f"The process with the id {coordinator_id} is the new COORDINATOR!!!")
+    print(f"\nThe process with the id {coordinator_id} is the new COORDINATOR!!!")
     
 def handle_heartbeat(heartbeat):
     global timeouts, alive_processes
@@ -181,23 +178,20 @@ def handle_heartbeat(heartbeat):
     with lock:
         timeouts[heartbeat_id] = 0
         if alive_processes[heartbeat_id] == False:
-            print(f"Process with id {heartbeat_id} has returned!")
+            print(f"\nProcess with id {heartbeat_id} has returned!")
             alive_processes[heartbeat_id] = True
             thread = threading.Thread(target=call_election, daemon=True)
             thread.start()
 
 def handle_message(message):
     if message["type"] == Message.ELECTION:
-        print("ELEICAO CHEGOUUUUUUUUUUUU")
         handle_election(message)
     elif message["type"] == Message.OK:
         handle_ok()
     elif message["type"] == Message.COORDINATOR:
         handle_coordinator(message)
-    elif message["type"] == Message.HEARTBEAT:
+    else: # The message is a heartbeat
         handle_heartbeat(message)
-    else:
-        print("ERORORORORO NO TIPO DE MESSAGANEMEMMMMMMMMMM")
 
 def handle_client(conn, addr):
     try:
@@ -206,6 +200,8 @@ def handle_client(conn, addr):
         handle_message(message)
     except json.JSONDecodeError:
         print(f"[{addr}] Error: Invalid JSON!")
+    finally:
+        conn.close()
 
 def server():
     global server_port
