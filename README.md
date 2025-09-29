@@ -34,6 +34,6 @@ Use the command to simultaneously run the 5 processes:
 for i in {1..5}; do gnome-terminal --title="Process $i" --command="bash -c 'python3 process$i.py --id $i; exec bash'": & done
 ```
 
-The pocesses will run normally until one or more of the processes dies/fails. If that process was the COORDINATOR, the algorithm will elect a new leader.
+The program will run normally until one or more of the processes dies/fails. If that process was the COORDINATOR, the algorithm will elect a new leader.
 <p align="center">You can kill a process with Ctrl+C, or through terminal, to test the algorithm! ;)</p>
  
