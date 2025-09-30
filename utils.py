@@ -95,7 +95,6 @@ def call_election():
         in_election = True
     print("Calling for an election!")
     send_election_messages()
-    send_ok_messages()
     time.sleep(ELECTION_TIMEOUT)
     if in_election == True: # If the in_election variable is still True, this process won the election
         print("\nThis process is the new COORDINATOR!!!")
@@ -153,12 +152,6 @@ def send_ok_message(destiny_process):
 def handle_election(election):
     election_id = election["process_id"]
     send_ok_message(election_id)
-
-def send_ok_messages():
-    global process_id, alive_processes, PROCESSES_AMOUNT
-    for i in range(process_id+1, PROCESSES_AMOUNT):
-        if alive_processes[i] == True:
-            send_ok_message(i)
 
 def handle_ok():
     global in_election
