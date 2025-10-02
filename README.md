@@ -31,7 +31,10 @@ Each process runs 3 concurrent threads:
 
 Use the command to simultaneously run the 5 processes:
 ```bash
-for i in {1..5}; do gnome-terminal --title="Process $i" --command="bash -c 'python3 process$i.py --id $i; exec bash'" & sleep 0.5 & done
+for i in {1..5}; do
+    gnome-terminal --title="Process $i" --command="bash -c 'python3 process$i.py --id $i; exec bash'" &
+    sleep 0.2
+done
 ```
 
 The program will run normally until one or more of the processes dies/fails. If that process was the COORDINATOR, the algorithm will elect a new leader.
