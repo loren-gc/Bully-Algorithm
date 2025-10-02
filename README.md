@@ -37,7 +37,7 @@ for i in {1..5}; do
 done
 ```
 
-<p align="center">__You might need to ajust the time between the executions depending on your machine !!!__</p>
+<p align="center">You might need to ajust the time between the executions depending on your machine !!!</p>
 
 ---
 
