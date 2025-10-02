@@ -37,6 +37,10 @@ for i in {1..5}; do
 done
 ```
 
+<p align="center">**You might need to ajust the time between the executions depending on your machine !!!**</p>
+
+---
+
 The program will run normally until one or more of the processes dies/fails. If that process was the COORDINATOR, the algorithm will elect a new leader.
 <p align="center">You can kill a process with Ctrl+C, or through terminal, to test the algorithm! ;)</p>
  
